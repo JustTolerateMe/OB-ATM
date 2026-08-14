@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Access Denied</title>
+<style>
+  :root{
+    --ink:#08070a;
+    --gold:#d4af6a;
+    --gold-bright:#f2cf8e;
+    --carpet:#9c1c26;
+    --cream:#f3e6d0;
+    --cream-dim:#cbb99e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body{
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse 700px 500px at 50% 0%, rgba(212,175,106,0.12), transparent 60%),
+      var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    padding: 32px 20px;
+  }
+  .card{
+    max-width: 420px;
+    text-align: center;
+  }
+  .eyebrow{
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin: 0 0 14px;
+  }
+  h1{
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-weight: 700;
+    font-size: 34px;
+    line-height: 1.15;
+    margin: 0 0 18px;
+    color: var(--gold-bright);
+    text-wrap: balance;
+  }
+  p{
+    color: var(--cream);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 12px;
+  }
+  .fine{
+    margin-top: 26px;
+    font-size: 12px;
+    color: var(--cream-dim);
+    font-style: italic;
+  }
+  .rule{
+    width: 60px;
+    height: 1px;
+    background: var(--gold);
+    margin: 22px auto;
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <p class="eyebrow">Access Denied</p>
+    <h1>What are you trying to do, bro?</h1>
+    <p>This is a low-budget internal meeting. There is no VIP list, no backstage, no hidden content.</p>
+    <p>Just dress up nicely and show up to A202.</p>
+    <div class="rule"></div>
+    <p class="fine">You scanned a QR code at a company meeting invite. That's the whole plot twist.</p>
+  </div>
+</body>
+</html>
