@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The OBBYs — Live Awards</title>
+<style>
+  :root{
+    --ink:#08070a;
+    --ink-2:#120d10;
+    --gold:#d4af6a;
+    --gold-bright:#f2cf8e;
+    --carpet:#9c1c26;
+    --carpet-deep:#5c0f16;
+    --carpet-hi:#c9313c;
+    --cream:#f3e6d0;
+    --cream-dim:#cbb99e;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+
+  body{
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 1100px 700px at 50% -10%, rgba(212,175,106,0.10), transparent 60%),
+      radial-gradient(ellipse 1400px 900px at 50% 115%, rgba(156,28,38,0.16), transparent 60%),
+      var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--cream);
+    overflow-x: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 16px;
+  }
+
+  .show{
+    width: 100%;
+    max-width: 780px;
+  }
+
+  /* ---------- Header ---------- */
+  .head{
+    text-align: center;
+    margin-bottom: 22px;
+  }
+  .eyebrow{
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin: 0 0 8px;
+  }
+  .show-title{
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-weight: 700;
+    font-size: 38px;
+    line-height: 1;
+    margin: 0;
+    letter-spacing: 0.01em;
+    background: linear-gradient(180deg, var(--gold-bright) 10%, var(--gold) 55%, #a97f3d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(242,207,142,0.3);
+  }
+
+  .progress{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 18px;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .dot{
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(212,175,106,0.25);
+    transition: background 0.3s ease, transform 0.3s ease;
+    flex-shrink: 0;
+  }
+  .dot.active{
+    background: var(--gold-bright);
+    transform: scale(1.3);
+  }
+  .dot.done{
+    background: var(--carpet-hi);
+  }
+
+  /* ---------- Stage card ---------- */
+  .stage{
+    position: relative;
+    background: var(--ink-2);
+    border-radius: 10px;
+    padding: 40px 32px 34px;
+    box-shadow:
+      0 40px 90px -30px rgba(0,0,0,0.75),
+      0 0 0 1px rgba(212,175,106,0.15);
+    overflow: hidden;
+    min-height: 440px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stage::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 500px 300px at 50% 0%, rgba(242,207,142,0.12), transparent 65%);
+    pointer-events: none;
+  }
+
+  .beam{
+    position: absolute;
+    top: -10px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    mix-blend-mode: screen;
+    opacity: 0.3;
+    transform-origin: top center;
+    pointer-events: none;
+    animation: sway 6s ease-in-out infinite alternate;
+  }
+  .beam.l{
+    left: 6%;
+    border-width: 0 60px 320px 60px;
+    border-color: transparent transparent rgba(255,244,214,0.4) transparent;
+  }
+  .beam.r{
+    right: 6%;
+    border-width: 0 60px 320px 60px;
+    border-color: transparent transparent rgba(255,244,214,0.4) transparent;
+    animation-delay: -3s;
+    animation-name: sway-r;
+  }
+  @keyframes sway{ from{ transform: rotate(-20deg); } to{ transform: rotate(6deg); } }
+  @keyframes sway-r{ from{ transform: rotate(20deg); } to{ transform: rotate(-6deg); } }
+
+  /* ---------- Panels (mutually exclusive) ---------- */
+  .panel{
+    position: relative;
+    width: 100%;
+    display: none;
+    text-align: center;
+  }
+  .panel.active{ display: block; }
+
+  /* ---- Intro panel ---- */
+  #introPanel.active{
+    animation: fade-up 0.5s ease both;
+  }
+  .intro-eyebrow{
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin: 0 0 16px;
+  }
+  .intro-name{
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 38px;
+    margin: 0 0 30px;
+    color: var(--gold-bright);
+    text-shadow: 0 0 30px rgba(242,207,142,0.35);
+    text-wrap: balance;
+  }
+
+  /* ---- Nominees panel ---- */
+  .category-label{
+    margin-bottom: 26px;
+  }
+  .category-eyebrow{
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin: 0 0 8px;
+  }
+  .category-name{
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 0;
+    color: var(--gold-bright);
+    text-wrap: balance;
+  }
+
+  .nominees{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .nominee{
+    background: linear-gradient(180deg, rgba(212,175,106,0.06), transparent);
+    border: 1px solid rgba(212,175,106,0.22);
+    border-radius: 8px;
+    padding: 18px 10px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    animation: nominee-in 0.5s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes nominee-in{
+    to{ opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .nominee-photos{
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  .nominee-photo{
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+    background: #1a1512;
+    display: block;
+  }
+  .nominee-photos.duo .nominee-photo:first-child{
+    margin-right: -14px;
+    position: relative;
+    z-index: 1;
+  }
+  .nominee-name{
+    font-family: Georgia, serif;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--cream);
+    margin: 0 0 4px;
+  }
+  /* ---- Suspense panel ---- */
+  .envelope{
+    position: relative;
+    width: 92px;
+    height: 64px;
+    margin: 0 auto 22px;
+  }
+  .envelope-body{
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #2a2220, #171212);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+  }
+  .envelope-flap{
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 32px 46px 0 46px;
+    border-color: var(--gold) transparent transparent transparent;
+    transform-origin: top center;
+    transition: transform 0.6s cubic-bezier(.4,0,.2,1);
+  }
+  .envelope.shake{ animation: shake 0.5s ease-in-out infinite; }
+  .envelope.open .envelope-flap{ transform: rotateX(180deg); }
+  @keyframes shake{
+    0%, 100%{ transform: rotate(0deg); }
+    25%{ transform: rotate(-3deg); }
+    75%{ transform: rotate(3deg); }
+  }
+  .suspense-text{
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .suspense-text .dots span{
+    animation: blink 1.2s infinite;
+    opacity: 0.2;
+  }
+  .suspense-text .dots span:nth-child(2){ animation-delay: 0.2s; }
+  .suspense-text .dots span:nth-child(3){ animation-delay: 0.4s; }
+  @keyframes blink{
+    0%, 100%{ opacity: 0.2; }
+    50%{ opacity: 1; }
+  }
+
+  /* ---- Winner panel ---- */
+  #winnerPanel.active{
+    animation: winner-in 0.6s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes winner-in{
+    from{ opacity: 0; transform: scale(0.85) translateY(10px); }
+    to{ opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes fade-up{
+    from{ opacity: 0; transform: translateY(10px); }
+    to{ opacity: 1; transform: translateY(0); }
+  }
+  .winner-trophy{
+    font-size: 36px;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 20px rgba(242,207,142,0.6));
+  }
+  .winner-photos{
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .winner-photo{
+    width: 108px;
+    height: 108px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--gold-bright);
+    background: #1a1512;
+    box-shadow: 0 0 0 6px rgba(242,207,142,0.12), 0 0 40px rgba(242,207,142,0.35);
+  }
+  .winner-eyebrow{
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin: 0 0 10px;
+  }
+  .winner-name{
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 34px;
+    margin: 0 0 10px;
+    color: var(--gold-bright);
+    text-shadow: 0 0 30px rgba(242,207,142,0.45);
+    text-wrap: balance;
+  }
+  .winner-why{
+    max-width: 440px;
+    margin: 0 auto;
+    font-size: 14px;
+    color: var(--cream-dim);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  /* ---------- Confetti ---------- */
+  .confetti{
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .confetti span{
+    position: absolute;
+    top: -10%;
+    width: 7px;
+    height: 12px;
+    opacity: 0;
+    border-radius: 1px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall{
+    0%{ opacity: 1; transform: translateY(0) rotate(0deg); }
+    100%{ opacity: 0.9; transform: translateY(480px) rotate(600deg); }
+  }
+
+  /* ---------- Outro ---------- */
+  #outroPanel h2{
+    font-family: Georgia, serif;
+    font-size: 30px;
+    color: var(--gold-bright);
+    margin: 0 0 12px;
+  }
+  #outroPanel p{
+    color: var(--cream-dim);
+    font-size: 14px;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    margin-top: 28px;
+  }
+  .btn{
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    font-family: -apple-system, Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 13px 30px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    color: #241b12;
+    box-shadow: 0 10px 24px -10px rgba(212,175,106,0.6);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(212,175,106,0.75); }
+  .btn:active{ transform: translateY(0); }
+
+  @media (max-width: 620px){
+    .nominees{ grid-template-columns: 1fr; }
+    .show-title{ font-size: 30px; }
+    .category-name, .intro-name{ font-size: 22px; }
+    .winner-name{ font-size: 28px; }
+    .winner-photo{ width: 84px; height: 84px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .beam, .envelope.shake, .nominee, #introPanel.active, #winnerPanel.active{ animation: none !important; opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="show">
+  <div class="head">
+    <p class="eyebrow">The OBBYs Present</p>
+    <h1 class="show-title">Live Awards</h1>
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="beam l"></div>
+    <div class="beam r"></div>
+    <div class="confetti" id="confetti"></div>
+
+    <!-- Beat 1: category announced -->
+    <div class="panel active" id="introPanel">
+      <p class="intro-eyebrow">Up Next — Category <span id="introNum">1</span> of <span id="introTotal">17</span></p>
+      <h2 class="intro-name" id="introName">The Golden Boot Award</h2>
+      <div class="controls">
+        <button class="btn" id="revealNomineesBtn">Reveal Nominees</button>
+      </div>
+    </div>
+
+    <!-- Beat 2: nominees -->
+    <div class="panel" id="nomineesPanel">
+      <div class="category-label">
+        <p class="category-eyebrow">Category <span id="catNum">1</span> of <span id="catTotal">17</span></p>
+        <h2 class="category-name" id="catName">The Golden Boot Award</h2>
+      </div>
+      <div class="nominees" id="nomineesGrid"></div>
+      <div class="controls">
+        <button class="btn" id="revealBtn">Open the Envelope</button>
+      </div>
+    </div>
+
+    <!-- Beat 3a: suspense -->
+    <div class="panel" id="suspensePanel">
+      <div class="envelope" id="envelope">
+        <div class="envelope-body"></div>
+        <div class="envelope-flap"></div>
+      </div>
+      <p class="suspense-text">And the winner is<span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
+    </div>
+
+    <!-- Beat 3b: winner -->
+    <div class="panel" id="winnerPanel">
+      <div class="winner-trophy">🏆</div>
+      <div class="winner-photos" id="winnerPhotos"></div>
+      <p class="winner-eyebrow" id="winnerCatName">The Golden Boot Award</p>
+      <h2 class="winner-name" id="winnerName">[NAME]</h2>
+      <p class="winner-why" id="winnerWhy">[WHY THEY WON]</p>
+      <div class="controls">
+        <button class="btn" id="nextBtn">Next Category</button>
+      </div>
+    </div>
+
+    <!-- Outro -->
+    <div class="panel" id="outroPanel">
+      <h2>That's a Wrap</h2>
+      <p>Nineteen legends. Seventeen awards. See you next month.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const P = "nominees/";
+  const people = {
+    anup:       { name: "Anup",      file: P + "anup.jpg" },
+    ranjith:    { name: "Ranjith",   file: P + "ranjith.png" },
+    anshuman:   { name: "Anshuman",  file: P + "anshuman.jpg" },
+    maitrey:    { name: "Maitrey",   file: P + "maitrey.jpg" },
+    omkar:      { name: "Omkar",     file: P + "omkar.png" },
+    spruha:     { name: "Spruha",    file: P + "spruha.jpg" },
+    jayant:     { name: "Jayant",    file: P + "jayant.png" },
+    anil:       { name: "Anil",      file: P + "anil.jpg" },
+    rishikesh:  { name: "Rishikesh", file: P + "rishikesh.jpg" },
+    sunil:      { name: "Sunil",     file: P + "sunil.png" },
+    shweta:     { name: "Shweta",    file: P + "shweta.jpg" },
+    guna:       { name: "Guna",      file: P + "guna.png" },
+    murali:     { name: "Murali",    file: P + "murali.jpg" },
+    manjunath:  { name: "Manjunath", file: P + "manjunath.jpg" },
+    ritu:       { name: "Ritu",      file: P + "ritu.png" },
+    sweety:     { name: "Sweety",    file: P + "sweety.jpg" },
+    haresh:     { name: "Haresh",    file: P + "haresh.png" },
+    sashi:      { name: "Sashi",     file: P + "sashi.jpg" },
+    ravi:       { name: "Ravi",      file: P + "ravi.jpg" }
+  };
+
+  function one(key, blurb){ return { members: [people[key]], blurb }; }
+  function two(key1, key2, blurb){ return { members: [people[key1], people[key2]], blurb }; }
+
+  const categories = [
+    {
+      title: "The Golden Boot Award",
+      nominees: [
+        one("anup", "Captain energy, every single match"),
+        one("ranjith", "Surprisingly deadly free-kick taker"),
+        one("anshuman", "All heart, occasionally offside")
+      ],
+      winner: { members: [people.anup], why: "Doesn't need to be on the pitch to know exactly what went wrong with that offside call. Peak fan energy, zero playing time." }
+    },
+    {
+      title: "Best Cinematography Award",
+      nominees: [
+        one("maitrey", "Finds the shot nobody else sees"),
+        one("ranjith", "Turns lunch breaks into portraits"),
+        one("omkar", "Candid king of the group chat")
+      ],
+      winner: { members: [people.ranjith], why: "Makes even a Monday standup look cinematic. The unofficial in-house lens." }
+    },
+    {
+      title: "Best Original Screenplay Award",
+      nominees: [
+        one("spruha", "Every anecdote has a plot twist"),
+        one("jayant", "Makes the mundane sound epic"),
+        one("anil", "The five-act Monday update")
+      ],
+      winner: { members: [people.anil], why: "Can turn a five-minute update into a five-act saga, and somehow you want more." }
+    },
+    {
+      title: "The Powerhouse Award",
+      nominees: [
+        one("rishikesh", "Knows the gym's opening hours by heart"),
+        one("jayant", "Protein shake in hand, always"),
+        one("sunil", "PRs before most people wake up")
+      ],
+      winner: { members: [people.jayant], why: "Has opinions about your protein intake and isn't wrong. Respect the grind." }
+    },
+    {
+      title: "Best Production Design Award",
+      nominees: [
+        one("shweta", "Doodles that outshine the deck"),
+        one("guna", "Quiet talent, loud output"),
+        one("murali", "Turns whiteboards into galleries")
+      ],
+      winner: { members: [people.shweta], why: "Doodles better in the margins of a meeting notebook than most people do on purpose." }
+    },
+    {
+      title: "The Zen Master Award",
+      nominees: [
+        one("manjunath", "Unbothered by literally anything"),
+        one("ritu", "Finds the calm in the chaos"),
+        one("sweety", "Good vibes, zero exceptions")
+      ],
+      winner: { members: [people.manjunath], why: "Has a direct line upstairs and isn't shy about using it. The most spiritually grounded person in the building, hands down." }
+    },
+    {
+      title: "The Visionary Director Award",
+      nominees: [
+        one("haresh", "Three steps ahead, always"),
+        one("anup", "Big picture, bigger plans"),
+        one("murali", "Sees the roadmap before it's drawn")
+      ],
+      winner: { members: [people.haresh], why: "Sees three moves ahead on everything — work, life, and probably this meeting." }
+    },
+    {
+      title: "The Rock Award",
+      nominees: [
+        one("sashi", "Says it'll get done. It gets done."),
+        one("guna", "The quiet backbone of every project"),
+        one("ravi", "Shows up, every single time")
+      ],
+      winner: { members: [people.sashi], why: "The person you ping at 6pm knowing it'll actually get done." }
+    },
+    {
+      title: "Best Costume Design Award",
+      nominees: [
+        one("shweta", "Dressed for the awards before the invite went out"),
+        one("maitrey", "Effortless, annoyingly so"),
+        one("ravi", "Best dressed, worst kept secret")
+      ],
+      winner: { members: [people.ravi], why: "Dresses like the meeting was actually important. We appreciate the effort." }
+    },
+    {
+      title: "Best Ensemble Cast Award",
+      nominees: [
+        one("maitrey", "Good at everything, humble about it"),
+        one("murali", "The Swiss army knife of the team"),
+        one("ritu", "Does it all, makes it look easy")
+      ],
+      winner: { members: [people.murali], why: "Good at basically everything, which is deeply annoying for the rest of us." }
+    },
+    {
+      title: "Best On-Screen Chemistry Award",
+      nominees: [
+        two("spruha", "sweety", "Bicker like siblings, brainstorm like legends"),
+        two("omkar", "ritu", "Unlikely pair, oddly perfect chemistry"),
+        two("ravi", "anil", "Chaos and calm, somehow balanced")
+      ],
+      winner: { members: [people.spruha, people.sweety], why: "Finish each other's sentences and somehow every idea gets better for it. Best friends first, brilliant collaborators always." }
+    },
+    {
+      title: "The Michelin Star Award",
+      nominees: [
+        one("omkar", "The potluck MVP, every time"),
+        one("spruha", "Secretly hoards the good recipes"),
+        one("sunil", "Brings the dish everyone fights over")
+      ],
+      winner: { members: [people.omkar, people.sunil], why: "Two people, one kitchen rivalry, zero survivors at the potluck table." }
+    },
+    {
+      title: "The Steady Hand Award",
+      nominees: [
+        one("rishikesh", "Nothing ever seems to faze him"),
+        one("maitrey", "The human equivalent of a deep breath"),
+        one("ritu", "Steady in every storm")
+      ],
+      winner: { members: [people.maitrey], why: "The one person in the room who never seems to panic, no matter what the deadline says." }
+    },
+    {
+      title: "Best Comeback Award",
+      nominees: [
+        one("rishikesh", "Bounces back before you notice he fell"),
+        one("sweety", "Keeps going, no matter what"),
+        one("sunil", "Never once seen giving up")
+      ],
+      winner: { members: [people.rishikesh], why: "Put in the work when nobody was watching, and it shows in everything he does now. The definition of a glow-up." }
+    },
+    {
+      title: "Best Leading Performance Award",
+      nominees: [
+        one("anshuman", "One-man comedy hour, every meeting"),
+        one("haresh", "The unexpected punchline machine"),
+        one("murali", "Turns silence into a bit")
+      ],
+      winner: { members: [people.anshuman], why: "Can turn a dead-quiet room into a full bit in under thirty seconds." }
+    },
+    {
+      title: "Best Supporting Role Award",
+      nominees: [
+        one("ritu", "Always has time, always tuned in"),
+        one("sweety", "The unofficial office therapist"),
+        one("haresh", "Remembers what you said three weeks ago")
+      ],
+      winner: { members: [people.ritu], why: "Always has time, always actually listening. The office's open door policy, in human form." }
+    },
+    {
+      title: "The Trailblazer Award",
+      nominees: [
+        one("guna", "First to try, first to break it"),
+        one("manjunath", "Quietly ahead of every trend"),
+        one("anshuman", "Chaos-tests every new tool immediately")
+      ],
+      winner: { members: [people.guna], why: "First to open any new tool the second it drops, and first to explain it to the rest of us before we've even heard of it." }
+    }
+  ];
+
+  let current = 0;
+
+  const progressEl = document.getElementById('progress');
+  const introNum = document.getElementById('introNum');
+  const introTotal = document.getElementById('introTotal');
+  const introName = document.getElementById('introName');
+  const catNumEl = document.getElementById('catNum');
+  const catTotalEl = document.getElementById('catTotal');
+  const catNameEl = document.getElementById('catName');
+  const nomineesGrid = document.getElementById('nomineesGrid');
+
+  const introPanel = document.getElementById('introPanel');
+  const nomineesPanel = document.getElementById('nomineesPanel');
+  const suspensePanel = document.getElementById('suspensePanel');
+  const winnerPanel = document.getElementById('winnerPanel');
+  const outroPanel = document.getElementById('outroPanel');
+  const allPanels = [introPanel, nomineesPanel, suspensePanel, winnerPanel, outroPanel];
+
+  const envelope = document.getElementById('envelope');
+  const revealNomineesBtn = document.getElementById('revealNomineesBtn');
+  const revealBtn = document.getElementById('revealBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const confettiEl = document.getElementById('confetti');
+  const winnerPhotos = document.getElementById('winnerPhotos');
+  const winnerCatName = document.getElementById('winnerCatName');
+  const winnerName = document.getElementById('winnerName');
+  const winnerWhy = document.getElementById('winnerWhy');
+
+  introTotal.textContent = categories.length;
+  catTotalEl.textContent = categories.length;
+
+  function showPanel(panel){
+    allPanels.forEach(p => p.classList.remove('active'));
+    panel.classList.add('active');
+  }
+
+  function buildProgress(){
+    progressEl.innerHTML = '';
+    categories.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'dot';
+      if (i < current) d.classList.add('done');
+      if (i === current) d.classList.add('active');
+      progressEl.appendChild(d);
+    });
+  }
+
+  function renderIntro(){
+    const cat = categories[current];
+    introNum.textContent = current + 1;
+    introName.textContent = cat.title;
+    envelope.classList.remove('shake', 'open');
+    confettiEl.innerHTML = '';
+    buildProgress();
+    showPanel(introPanel);
+  }
+
+  function renderNominees(){
+    const cat = categories[current];
+    catNumEl.textContent = current + 1;
+    catNameEl.textContent = cat.title;
+
+    nomineesGrid.innerHTML = '';
+    cat.nominees.forEach((nom, i) => {
+      const card = document.createElement('div');
+      card.className = 'nominee';
+      card.style.animationDelay = (i * 0.25) + 's';
+
+      const isDuo = nom.members.length > 1;
+      const photos = nom.members.map(m => `<img class="nominee-photo" src="${m.file}" alt="${m.name}">`).join('');
+      const names = nom.members.map(m => m.name).join(' & ');
+
+      card.innerHTML = `
+        <div class="nominee-photos${isDuo ? ' duo' : ''}">${photos}</div>
+        <p class="nominee-name">${names}</p>
+      `;
+      nomineesGrid.appendChild(card);
+    });
+
+    showPanel(nomineesPanel);
+  }
+
+  function spawnConfetti(){
+    confettiEl.innerHTML = '';
+    const colors = ['#d4af6a', '#f2cf8e', '#9c1c26', '#f3e6d0', '#c9313c'];
+    for (let i = 0; i < 60; i++){
+      const s = document.createElement('span');
+      s.style.left = Math.random() * 100 + '%';
+      s.style.background = colors[Math.floor(Math.random() * colors.length)];
+      s.style.animationDuration = (1.6 + Math.random() * 1.2) + 's';
+      s.style.animationDelay = (Math.random() * 0.4) + 's';
+      s.style.top = '-5%';
+      confettiEl.appendChild(s);
+    }
+  }
+
+  revealNomineesBtn.addEventListener('click', renderNominees);
+
+  revealBtn.addEventListener('click', () => {
+    showPanel(suspensePanel);
+    envelope.classList.add('shake');
+
+    setTimeout(() => {
+      envelope.classList.remove('shake');
+      envelope.classList.add('open');
+    }, 1400);
+
+    setTimeout(() => {
+      const cat = categories[current];
+      winnerPhotos.innerHTML = cat.winner.members.map(m => `<img class="winner-photo" src="${m.file}" alt="${m.name}">`).join('');
+      winnerCatName.textContent = cat.title;
+      winnerName.textContent = cat.winner.members.map(m => m.name).join(' & ');
+      winnerWhy.textContent = cat.winner.why;
+      showPanel(winnerPanel);
+      spawnConfetti();
+    }, 2400);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    current++;
+    if (current >= categories.length){
+      current = categories.length - 1;
+      buildProgress();
+      document.querySelectorAll('.dot').forEach(d => { d.classList.add('done'); d.classList.remove('active'); });
+      showPanel(outroPanel);
+      return;
+    }
+    renderIntro();
+  });
+
+  renderIntro();
+</script>
+
+</body>
+</html>
