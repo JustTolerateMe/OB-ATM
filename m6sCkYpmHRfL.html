@@ -37,25 +37,25 @@
 
   .show{
     width: 100%;
-    max-width: 780px;
+    max-width: 1040px;
   }
 
   /* ---------- Header ---------- */
   .head{
     text-align: center;
-    margin-bottom: 22px;
+    margin-bottom: 32px;
   }
   .eyebrow{
-    font-size: 11px;
-    letter-spacing: 0.24em;
+    font-size: 13px;
+    letter-spacing: 0.26em;
     text-transform: uppercase;
     color: var(--cream-dim);
-    margin: 0 0 8px;
+    margin: 0 0 10px;
   }
   .show-title{
     font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
     font-weight: 700;
-    font-size: 38px;
+    font-size: 56px;
     line-height: 1;
     margin: 0;
     letter-spacing: 0.01em;
@@ -70,15 +70,15 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 7px;
-    margin-top: 18px;
-    max-width: 420px;
+    gap: 9px;
+    margin-top: 24px;
+    max-width: 520px;
     margin-left: auto;
     margin-right: auto;
   }
   .dot{
-    width: 7px;
-    height: 7px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: rgba(212,175,106,0.25);
     transition: background 0.3s ease, transform 0.3s ease;
@@ -96,13 +96,13 @@
   .stage{
     position: relative;
     background: var(--ink-2);
-    border-radius: 10px;
-    padding: 40px 32px 34px;
+    border-radius: 14px;
+    padding: 64px 56px;
     box-shadow:
-      0 40px 90px -30px rgba(0,0,0,0.75),
+      0 50px 110px -30px rgba(0,0,0,0.75),
       0 0 0 1px rgba(212,175,106,0.15);
     overflow: hidden;
-    min-height: 440px;
+    min-height: clamp(520px, 76vh, 800px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -130,12 +130,12 @@
   }
   .beam.l{
     left: 6%;
-    border-width: 0 60px 320px 60px;
+    border-width: 0 90px 520px 90px;
     border-color: transparent transparent rgba(255,244,214,0.4) transparent;
   }
   .beam.r{
     right: 6%;
-    border-width: 0 60px 320px 60px;
+    border-width: 0 90px 520px 90px;
     border-color: transparent transparent rgba(255,244,214,0.4) transparent;
     animation-delay: -3s;
     animation-name: sway-r;
@@ -157,17 +157,17 @@
     animation: fade-up 0.5s ease both;
   }
   .intro-eyebrow{
-    font-size: 12px;
-    letter-spacing: 0.22em;
+    font-size: 15px;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--cream-dim);
-    margin: 0 0 16px;
+    margin: 0 0 22px;
   }
   .intro-name{
     font-family: Georgia, serif;
     font-weight: 700;
-    font-size: 38px;
-    margin: 0 0 30px;
+    font-size: 58px;
+    margin: 0 0 42px;
     color: var(--gold-bright);
     text-shadow: 0 0 30px rgba(242,207,142,0.35);
     text-wrap: balance;
@@ -175,19 +175,19 @@
 
   /* ---- Nominees panel ---- */
   .category-label{
-    margin-bottom: 26px;
+    margin-bottom: 40px;
   }
   .category-eyebrow{
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--cream-dim);
-    margin: 0 0 8px;
+    margin: 0 0 10px;
   }
   .category-name{
     font-family: Georgia, serif;
     font-weight: 700;
-    font-size: 26px;
+    font-size: 40px;
     margin: 0;
     color: var(--gold-bright);
     text-wrap: balance;
@@ -196,29 +196,35 @@
   .nominees{
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: 28px;
+    perspective: 1200px;
   }
   .nominee{
     background: linear-gradient(180deg, rgba(212,175,106,0.06), transparent);
     border: 1px solid rgba(212,175,106,0.22);
-    border-radius: 8px;
-    padding: 18px 10px;
+    border-radius: 10px;
+    padding: 30px 16px;
     text-align: center;
     opacity: 0;
-    transform: translateY(14px) scale(0.96);
-    animation: nominee-in 0.5s cubic-bezier(.2,.8,.2,1) forwards;
+    transform-style: preserve-3d;
+    transform-origin: center;
+    backface-visibility: hidden;
+    transform: rotateY(-100deg);
+    animation: nominee-flip 1.9s cubic-bezier(.3,.15,.15,1) forwards;
   }
-  @keyframes nominee-in{
-    to{ opacity: 1; transform: translateY(0) scale(1); }
+  @keyframes nominee-flip{
+    0%{ opacity: 0; transform: rotateY(-100deg); }
+    55%{ opacity: 1; }
+    100%{ opacity: 1; transform: rotateY(0deg); }
   }
   .nominee-photos{
     display: flex;
     justify-content: center;
-    margin-bottom: 10px;
+    margin-bottom: 18px;
   }
   .nominee-photo{
-    width: 58px;
-    height: 58px;
+    width: 92px;
+    height: 92px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--gold);
@@ -226,13 +232,13 @@
     display: block;
   }
   .nominee-photos.duo .nominee-photo:first-child{
-    margin-right: -14px;
+    margin-right: -22px;
     position: relative;
     z-index: 1;
   }
   .nominee-name{
     font-family: Georgia, serif;
-    font-size: 14.5px;
+    font-size: 19px;
     font-weight: 700;
     color: var(--cream);
     margin: 0 0 4px;
@@ -240,23 +246,23 @@
   /* ---- Suspense panel ---- */
   .envelope{
     position: relative;
-    width: 92px;
-    height: 64px;
-    margin: 0 auto 22px;
+    width: 130px;
+    height: 90px;
+    margin: 0 auto 30px;
   }
   .envelope-body{
     position: absolute;
     inset: 0;
     background: linear-gradient(180deg, #2a2220, #171212);
     border: 1px solid var(--gold);
-    border-radius: 4px;
+    border-radius: 5px;
   }
   .envelope-flap{
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 0;
     border-style: solid;
-    border-width: 32px 46px 0 46px;
+    border-width: 45px 65px 0 65px;
     border-color: var(--gold) transparent transparent transparent;
     transform-origin: top center;
     transition: transform 0.6s cubic-bezier(.4,0,.2,1);
@@ -269,7 +275,7 @@
     75%{ transform: rotate(3deg); }
   }
   .suspense-text{
-    font-size: 13px;
+    font-size: 16px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--cream-dim);
@@ -298,47 +304,47 @@
     to{ opacity: 1; transform: translateY(0); }
   }
   .winner-trophy{
-    font-size: 36px;
-    margin-bottom: 10px;
+    font-size: 52px;
+    margin-bottom: 16px;
     filter: drop-shadow(0 0 20px rgba(242,207,142,0.6));
   }
   .winner-photos{
     display: flex;
     justify-content: center;
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 22px;
+    margin-bottom: 24px;
   }
   .winner-photo{
-    width: 108px;
-    height: 108px;
+    width: 156px;
+    height: 156px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid var(--gold-bright);
+    border: 4px solid var(--gold-bright);
     background: #1a1512;
-    box-shadow: 0 0 0 6px rgba(242,207,142,0.12), 0 0 40px rgba(242,207,142,0.35);
+    box-shadow: 0 0 0 8px rgba(242,207,142,0.12), 0 0 50px rgba(242,207,142,0.35);
   }
   .winner-eyebrow{
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--cream-dim);
-    margin: 0 0 10px;
+    margin: 0 0 14px;
   }
   .winner-name{
     font-family: Georgia, serif;
     font-weight: 700;
-    font-size: 34px;
-    margin: 0 0 10px;
+    font-size: 52px;
+    margin: 0 0 16px;
     color: var(--gold-bright);
     text-shadow: 0 0 30px rgba(242,207,142,0.45);
     text-wrap: balance;
   }
   .winner-why{
-    max-width: 440px;
+    max-width: 560px;
     margin: 0 auto;
-    font-size: 14px;
+    font-size: 18px;
     color: var(--cream-dim);
-    line-height: 1.5;
+    line-height: 1.55;
     font-style: italic;
   }
 
@@ -352,32 +358,32 @@
   .confetti span{
     position: absolute;
     top: -10%;
-    width: 7px;
-    height: 12px;
+    width: 9px;
+    height: 15px;
     opacity: 0;
     border-radius: 1px;
     animation: fall linear forwards;
   }
   @keyframes fall{
     0%{ opacity: 1; transform: translateY(0) rotate(0deg); }
-    100%{ opacity: 0.9; transform: translateY(480px) rotate(600deg); }
+    100%{ opacity: 0.9; transform: translateY(780px) rotate(600deg); }
   }
 
   /* ---------- Outro ---------- */
   #outroPanel h2{
     font-family: Georgia, serif;
-    font-size: 30px;
+    font-size: 44px;
     color: var(--gold-bright);
-    margin: 0 0 12px;
+    margin: 0 0 16px;
   }
   #outroPanel p{
     color: var(--cream-dim);
-    font-size: 14px;
+    font-size: 18px;
   }
 
   /* ---------- Controls ---------- */
   .controls{
-    margin-top: 28px;
+    margin-top: 44px;
   }
   .btn{
     appearance: none;
@@ -385,10 +391,10 @@
     cursor: pointer;
     font-family: -apple-system, Helvetica, Arial, sans-serif;
     font-weight: 700;
-    font-size: 12.5px;
+    font-size: 15px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    padding: 13px 30px;
+    padding: 18px 44px;
     border-radius: 999px;
     background: linear-gradient(180deg, var(--gold-bright), var(--gold));
     color: #241b12;
@@ -398,12 +404,14 @@
   .btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(212,175,106,0.75); }
   .btn:active{ transform: translateY(0); }
 
-  @media (max-width: 620px){
+  @media (max-width: 720px){
+    .stage{ padding: 44px 24px; }
     .nominees{ grid-template-columns: 1fr; }
-    .show-title{ font-size: 30px; }
-    .category-name, .intro-name{ font-size: 22px; }
-    .winner-name{ font-size: 28px; }
-    .winner-photo{ width: 84px; height: 84px; }
+    .show-title{ font-size: 36px; }
+    .category-name, .intro-name{ font-size: 28px; }
+    .winner-name{ font-size: 34px; }
+    .winner-photo{ width: 110px; height: 110px; }
+    .nominee-photo{ width: 72px; height: 72px; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -724,7 +732,7 @@
     cat.nominees.forEach((nom, i) => {
       const card = document.createElement('div');
       card.className = 'nominee';
-      card.style.animationDelay = (i * 0.25) + 's';
+      card.style.animationDelay = (i * 2) + 's';
 
       const isDuo = nom.members.length > 1;
       const photos = nom.members.map(m => `<img class="nominee-photo" src="${m.file}" alt="${m.name}">`).join('');
