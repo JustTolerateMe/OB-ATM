@@ -435,16 +435,45 @@
     align-items: center;
   }
   .forge-canvas-wrap{
-    position: relative;
-    width: 100%;
-    height: 460px;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: #050406;
   }
   .forge-canvas-wrap canvas{
     width: 100%;
     height: 100%;
     display: block;
   }
-  #openerControls{ margin-top: 8px; position: relative; z-index: 2; }
+  .forge-canvas-wrap.gone{ display: none; }
+
+  /* during the cold open the stage beams stay dark — the void is pure */
+  .stage.opener .beam{ opacity: 0; }
+  .stage.opener::before{ opacity: 0; }
+
+  #openerPanel.active{
+    min-height: clamp(460px, 68vh, 720px);
+    justify-content: flex-end;
+  }
+  #openerControls{
+    margin-top: 8px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+  }
+  .btn-ghost{
+    background: transparent;
+    color: var(--cream-dim);
+    box-shadow: none;
+    border: 1px solid rgba(212,175,106,0.4);
+  }
+  .btn-ghost:hover{
+    color: var(--gold-bright);
+    border-color: var(--gold-bright);
+    box-shadow: none;
+  }
 
   @media (max-width: 720px){
     .stage{ padding: 44px 24px; }
@@ -470,18 +499,19 @@
     <div class="progress" id="progress"></div>
   </div>
 
-  <div class="stage" id="stage">
+  <div class="stage opener" id="stage">
+    <div class="forge-canvas-wrap" id="forgeWrap">
+      <canvas id="forgeCanvas"></canvas>
+    </div>
     <div class="beam l"></div>
     <div class="beam r"></div>
     <div class="confetti" id="confetti"></div>
 
     <!-- Cold open: Trophy Forge (Three.js) -->
     <div class="panel active" id="openerPanel">
-      <div class="forge-canvas-wrap">
-        <canvas id="forgeCanvas"></canvas>
-      </div>
       <div class="controls" id="openerControls">
         <button class="btn" id="beginForgeBtn">Begin</button>
+        <button class="btn btn-ghost" id="replayForgeBtn" style="display:none;">Replay</button>
         <button class="btn" id="enterShowBtn" style="display:none;">Enter The OBBYs</button>
       </div>
     </div>
@@ -546,6 +576,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script>
   const P = "nominees/";
   const people = {
@@ -908,139 +944,213 @@
     goToCategory();
   });
 
-  // ---- Cold open: Trophy Forge (Three.js particle assembly) ----
+  // ---- Cold open: The Trophy Forge (Three.js title sequence) ----
   const beginForgeBtn = document.getElementById('beginForgeBtn');
+  const replayForgeBtn = document.getElementById('replayForgeBtn');
   const enterShowBtn = document.getElementById('enterShowBtn');
   const forgeCanvas = document.getElementById('forgeCanvas');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Beat boundaries, in seconds from sequence start
+  const T = {
+    voidEnd:      2.0,
+    igniteEnd:    3.6,
+    forgeEnd:     7.6,
+    solidifyEnd:  9.8,
+    detonateEnd: 11.3,
+    nameEnd:     14.2
+  };
+
+  const clamp01 = x => x < 0 ? 0 : (x > 1 ? 1 : x);
+  const easeOutCubic  = x => 1 - Math.pow(1 - x, 3);
+  const easeInCubic   = x => x * x * x;
+  const easeInOutCubic = x => x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+  const smoothstep = x => { x = clamp01(x); return x*x*(3 - 2*x); };
 
   function makeCircleTexture(){
     const c = document.createElement('canvas');
     c.width = c.height = 64;
     const ctx = c.getContext('2d');
     const g = ctx.createRadialGradient(32,32,0,32,32,32);
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(0.4, 'rgba(255,244,214,0.9)');
-    g.addColorStop(1, 'rgba(255,244,214,0)');
+    g.addColorStop(0,   'rgba(255,255,255,1)');
+    g.addColorStop(0.35,'rgba(255,244,214,0.85)');
+    g.addColorStop(1,   'rgba(255,244,214,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0,0,64,64);
     return new THREE.CanvasTexture(c);
   }
 
-  function makeGlowTexture(){
+  function makeRadialTexture(inner, mid, outer){
     const c = document.createElement('canvas');
     c.width = c.height = 256;
     const ctx = c.getContext('2d');
     const g = ctx.createRadialGradient(128,128,0,128,128,128);
-    g.addColorStop(0, 'rgba(242,207,142,0.9)');
-    g.addColorStop(0.5, 'rgba(212,175,106,0.35)');
-    g.addColorStop(1, 'rgba(212,175,106,0)');
+    g.addColorStop(0, inner);
+    g.addColorStop(0.5, mid);
+    g.addColorStop(1, outer);
     ctx.fillStyle = g;
     ctx.fillRect(0,0,256,256);
     return new THREE.CanvasTexture(c);
   }
 
-  function makeTextTexture(text){
+  // Sample point positions from rendered text, so particles can become letterforms
+  function sampleTextPoints(text, count, worldW, worldH){
     const c = document.createElement('canvas');
-    c.width = 1400; c.height = 380;
+    c.width = 1024; c.height = 256;
     const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,c.width,c.height);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,c.width,c.height);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '700 190px Georgia, "Iowan Old Style", serif';
-    const grad = ctx.createLinearGradient(0, c.height*0.25, 0, c.height*0.8);
-    grad.addColorStop(0, '#f2cf8e');
-    grad.addColorStop(0.55, '#d4af6a');
-    grad.addColorStop(1, '#a97f3d');
-    ctx.shadowColor = 'rgba(242,207,142,0.8)';
-    ctx.shadowBlur = 40;
-    ctx.fillStyle = grad;
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 150px Georgia, "Iowan Old Style", serif';
     ctx.fillText(text, c.width/2, c.height/2);
-    return new THREE.CanvasTexture(c);
+
+    const data = ctx.getImageData(0,0,c.width,c.height).data;
+    const hits = [];
+    for (let y = 0; y < c.height; y += 2){
+      for (let x = 0; x < c.width; x += 2){
+        if (data[(y*c.width + x)*4] > 130) hits.push(x, y);
+      }
+    }
+
+    const out = new Float32Array(count*3);
+    const n = hits.length / 2;
+    for (let i = 0; i < count; i++){
+      const j = (Math.random() * n) | 0;
+      const px = hits[j*2], py = hits[j*2+1];
+      out[i*3]   = (px / c.width  - 0.5) * worldW + (Math.random()-0.5)*0.03;
+      out[i*3+1] = -(py / c.height - 0.5) * worldH + (Math.random()-0.5)*0.03;
+      out[i*3+2] = (Math.random()-0.5) * 0.22;
+    }
+    return out;
   }
 
+  // Trophy point cloud: base -> stem -> cup + handles, tagged by assembly wave
   function sampleTrophyPoint(){
-    const part = Math.random();
-    if (part < 0.5){
-      const theta = Math.random()*Math.PI*2;
-      const phi = Math.random()*Math.PI;
-      const r = 1.05;
+    const r = Math.random();
+    if (r < 0.20){                                  // base
+      const th = Math.random()*Math.PI*2;
+      const rad = 0.62*Math.sqrt(Math.random());
+      return { x: rad*Math.cos(th), y: -0.92 + (Math.random()-0.5)*0.1, z: rad*Math.sin(th), wave: 0 };
+    } else if (r < 0.28){                           // plinth
+      const th = Math.random()*Math.PI*2;
+      const rad = 0.34*Math.sqrt(Math.random());
+      return { x: rad*Math.cos(th), y: -0.78 + Math.random()*0.12, z: rad*Math.sin(th), wave: 0 };
+    } else if (r < 0.42){                           // stem
+      const th = Math.random()*Math.PI*2;
+      const t = Math.random();
+      const rad = 0.10 + 0.05*Math.pow(1-t, 2);
+      return { x: rad*Math.cos(th), y: -0.70 + t*0.78, z: rad*Math.sin(th), wave: 1 };
+    } else if (r < 0.55){                           // handles
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const a = -Math.PI*0.45 + Math.random()*Math.PI*1.25;
+      const R = 0.42, tube = 0.045;
+      const cx = side*0.72, cy = 0.78;
+      const ta = Math.random()*Math.PI*2;
       return {
-        x: r*Math.sin(phi)*Math.cos(theta),
-        y: r*Math.cos(phi)*0.85 + 0.95,
-        z: r*Math.sin(phi)*Math.sin(theta)*0.7
+        x: cx + side*(R*Math.cos(a)) + tube*Math.cos(ta),
+        y: cy + R*Math.sin(a) + tube*Math.sin(ta),
+        z: tube*Math.sin(ta)*1.4,
+        wave: 2
       };
-    } else if (part < 0.74){
-      const theta = Math.random()*Math.PI*2;
-      const r = 0.14;
-      return { x: r*Math.cos(theta), y: -0.78 + Math.random()*1.0, z: r*Math.sin(theta) };
-    } else {
-      const theta = Math.random()*Math.PI*2;
-      const r = 0.6*Math.sqrt(Math.random());
-      return { x: r*Math.cos(theta), y: -0.85 + (Math.random()-0.5)*0.1, z: r*Math.sin(theta) };
+    } else {                                        // cup
+      const th = Math.random()*Math.PI*2;
+      const t = Math.random();
+      const profile = 0.30 + 0.72*Math.pow(t, 0.62);
+      const y = 0.10 + t*1.05;
+      const shell = 0.94 + Math.random()*0.06;
+      return { x: profile*shell*Math.cos(th), y: y, z: profile*shell*Math.sin(th), wave: 2 };
     }
   }
 
-  function easeOutCubic(x){ return 1 - Math.pow(1-x, 3); }
-  function easeInCubic(x){ return x*x*x; }
-
   function initForge(){
-    const N = reduceMotion ? 0 : 900;
+    const N = 4500;
+    const WAVE_DELAY = [0.0, 0.16, 0.34];
+
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, forgeCanvas.clientWidth / forgeCanvas.clientHeight, 0.1, 100);
-    camera.position.set(0, 0, 9);
+    const camera = new THREE.PerspectiveCamera(52, 16/9, 0.1, 200);
 
     const renderer = new THREE.WebGLRenderer({ canvas: forgeCanvas, antialias: true, alpha: true, premultipliedAlpha: false });
     renderer.setClearColor(0x000000, 0);
-    forgeCanvas.style.background = 'transparent';
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    function resize(){
-      const w = forgeCanvas.clientWidth, h = forgeCanvas.clientHeight;
+    // Optional bloom — falls back to direct render if the CDN passes didn't load
+    let composer = null, bloomPass = null;
+    const hasBloom = !!(THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass);
+
+    function sizeAll(){
+      const w = forgeCanvas.clientWidth || 800;
+      const h = forgeCanvas.clientHeight || 500;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      if (composer) composer.setSize(w, h);
     }
-    resize();
-    window.addEventListener('resize', resize);
 
-    scene.add(new THREE.AmbientLight(0x2a2015, 1.4));
-    const p1 = new THREE.PointLight(0xf2cf8e, 2.2, 30); p1.position.set(3, 4, 5); scene.add(p1);
-    const p2 = new THREE.PointLight(0xd4af6a, 1.4, 30); p2.position.set(-4, -2, 4); scene.add(p2);
+    if (hasBloom){
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+      bloomPass = new THREE.UnrealBloomPass(
+        new THREE.Vector2(forgeCanvas.clientWidth || 800, forgeCanvas.clientHeight || 500),
+        0.62, 0.5, 0.28
+      );
+      composer.addPass(bloomPass);
+    }
+    sizeAll();
+    window.addEventListener('resize', sizeAll);
 
-    const starts = new Float32Array(N*3);
-    const targets = new Float32Array(N*3);
+    scene.add(new THREE.AmbientLight(0x241b12, 1.2));
+    const keyLight = new THREE.PointLight(0xf2cf8e, 2.4, 40); keyLight.position.set(3.5, 4.5, 5); scene.add(keyLight);
+    const rimLight = new THREE.PointLight(0xd4af6a, 1.6, 40); rimLight.position.set(-4, -1.5, 3.5); scene.add(rimLight);
+
+    // ---- Particle field ----
+    const dust      = new Float32Array(N*3);
+    const trophy    = new Float32Array(N*3);
+    const exploded  = new Float32Array(N*3);
     const positions = new Float32Array(N*3);
-    const colors = new Float32Array(N*3);
-    const explodeDir = new Float32Array(N*3);
+    const colors    = new Float32Array(N*3);
+    const baseHue   = new Float32Array(N*3);
+    const distC     = new Float32Array(N);
+    const waveOf    = new Float32Array(N);
+    const jitter    = new Float32Array(N);
+    const spiral    = new Float32Array(N);
+    const twPhase   = new Float32Array(N);
 
-    const goldA = new THREE.Color(0xf2cf8e);
-    const goldB = new THREE.Color(0xd4af6a);
+    const text = sampleTextPoints('THE OBBYs', N, 8.8, 2.2);
+
+    const gA = new THREE.Color(0xfff4d6);
+    const gB = new THREE.Color(0xd4af6a);
 
     for (let i = 0; i < N; i++){
-      const r = 6 + Math.random()*4.5;
-      const theta = Math.random()*Math.PI*2;
-      const phi = Math.acos(2*Math.random()-1);
-      starts[i*3]   = r*Math.sin(phi)*Math.cos(theta);
-      starts[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
-      starts[i*3+2] = r*Math.cos(phi);
+      const rr = 9 + Math.random()*9;
+      const th = Math.random()*Math.PI*2;
+      const ph = Math.acos(2*Math.random()-1);
+      const dx = rr*Math.sin(ph)*Math.cos(th);
+      const dy = rr*Math.sin(ph)*Math.sin(th)*0.7;
+      // keep dust off the camera's dolly path so nothing blows out as a near-field blob
+      let dz = rr*Math.cos(ph);
+      if (dz > 3) dz = 6 - dz;
+      dust[i*3] = dx; dust[i*3+1] = dy; dust[i*3+2] = dz;
+      positions[i*3] = dx; positions[i*3+1] = dy; positions[i*3+2] = dz;
+      distC[i] = Math.sqrt(dx*dx + dy*dy + dz*dz);
 
       const t = sampleTrophyPoint();
-      targets[i*3] = t.x; targets[i*3+1] = t.y; targets[i*3+2] = t.z;
+      trophy[i*3] = t.x; trophy[i*3+1] = t.y; trophy[i*3+2] = t.z;
+      waveOf[i] = t.wave;
+      jitter[i] = Math.random()*0.10;
+      spiral[i] = (Math.random()*2.4 + 1.0) * (Math.random() < 0.5 ? -1 : 1);
+      twPhase[i] = Math.random()*Math.PI*2;
 
-      positions[i*3] = starts[i*3]; positions[i*3+1] = starts[i*3+1]; positions[i*3+2] = starts[i*3+2];
+      const len = Math.sqrt(t.x*t.x + t.y*t.y + t.z*t.z) || 1;
+      const sp = 5 + Math.random()*7;
+      exploded[i*3]   = t.x + (t.x/len)*sp + (Math.random()-0.5)*2.5;
+      exploded[i*3+1] = t.y + (t.y/len)*sp + 1.2 + (Math.random()-0.5)*2.5;
+      exploded[i*3+2] = t.z + (t.z/len)*sp + Math.random()*4.5;
 
-      const c = goldA.clone().lerp(goldB, Math.random());
+      const c = gA.clone().lerp(gB, Math.random()*0.85);
+      baseHue[i*3] = c.r; baseHue[i*3+1] = c.g; baseHue[i*3+2] = c.b;
       colors[i*3] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
-
-      const ex = t.x + (Math.random()-0.5)*0.6;
-      const ey = t.y + (Math.random()-0.5)*0.6;
-      const ez = t.z + (Math.random()-0.5)*0.6;
-      const len = Math.sqrt(ex*ex+ey*ey+ez*ez) || 1;
-      const speed = 4 + Math.random()*5;
-      explodeDir[i*3] = (ex/len)*speed;
-      explodeDir[i*3+1] = (ey/len)*speed + 1.5;
-      explodeDir[i*3+2] = (ez/len)*speed;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -1048,112 +1158,332 @@
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const mat = new THREE.PointsMaterial({
-      size: 0.1,
+      size: 0.085,
       vertexColors: true,
       transparent: true,
-      opacity: 0.95,
+      opacity: 1,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      sizeAttenuation: true,
       map: makeCircleTexture()
     });
+    const points = new THREE.Points(geo, mat);
+    scene.add(points);
 
-    const particles = new THREE.Points(geo, mat);
-    scene.add(particles);
+    // ---- Shockwave ring ----
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.85, 1.0, 96),
+      new THREE.MeshBasicMaterial({
+        color: 0xfff4d6, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
+      })
+    );
+    scene.add(ring);
 
-    const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: makeGlowTexture(), transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, depthWrite: false
+    // ---- Core glow, flash, floor, shafts ----
+    const glowTex = makeRadialTexture('rgba(255,244,214,0.95)','rgba(212,175,106,0.35)','rgba(212,175,106,0)');
+
+    const coreGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
     }));
-    glowSprite.scale.set(7, 7, 1);
-    scene.add(glowSprite);
+    coreGlow.scale.set(6,6,1);
+    scene.add(coreGlow);
 
-    const textSprite = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: makeTextTexture('THE OBBYs'), transparent: true, opacity: 0, depthWrite: false
+    const flash = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
     }));
-    textSprite.scale.set(7, 1.9, 1);
-    scene.add(textSprite);
+    flash.scale.set(26,26,1);
+    scene.add(flash);
 
-    let phase = 'idle';
-    let phaseStart = 0;
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(16,16),
+      new THREE.MeshBasicMaterial({
+        map: makeRadialTexture('rgba(242,207,142,0.55)','rgba(156,28,38,0.12)','rgba(0,0,0,0)'),
+        transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
+      })
+    );
+    floor.rotation.x = -Math.PI/2;
+    floor.position.y = -1.05;
+    scene.add(floor);
+
+    const shafts = [];
+    for (let s = 0; s < 2; s++){
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(1.7, 15, 40, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0xfff4d6, transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
+        })
+      );
+      cone.position.set(s === 0 ? -2.9 : 2.9, 6.0, -1.4);
+      cone.rotation.z = (s === 0 ? 1 : -1) * 0.20;
+      scene.add(cone);
+      shafts.push(cone);
+    }
+
+    // ---- Sequence state ----
+    let running = false, done = false, startT = 0, ambient = 0;
     const clock = new THREE.Clock();
+    const pos = geo.attributes.position.array;
+    const col = geo.attributes.color.array;
+    const tmp = new THREE.Color();
 
-    function updateConverge(k){
-      const pos = geo.attributes.position.array;
-      for (let i = 0; i < N; i++){
-        pos[i*3]   = starts[i*3]   + (targets[i*3]   - starts[i*3])   * k;
-        pos[i*3+1] = starts[i*3+1] + (targets[i*3+1] - starts[i*3+1]) * k;
-        pos[i*3+2] = starts[i*3+2] + (targets[i*3+2] - starts[i*3+2]) * k;
-      }
-      geo.attributes.position.needsUpdate = true;
+    function setParticle(i, x, y, z, bright, warm){
+      pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+      tmp.setRGB(baseHue[i*3], baseHue[i*3+1], baseHue[i*3+2]);
+      if (warm > 0) tmp.lerp(gA, warm);
+      col[i*3] = tmp.r*bright; col[i*3+1] = tmp.g*bright; col[i*3+2] = tmp.b*bright;
     }
 
-    function updateExplode(k){
-      const pos = geo.attributes.position.array;
+    function reset(){
+      running = false; done = false;
+      ring.material.opacity = 0;
+      coreGlow.material.opacity = 0;
+      flash.material.opacity = 0;
+      floor.material.opacity = 0;
+      shafts.forEach(s => s.material.opacity = 0);
+      points.rotation.y = 0;
+      camera.position.set(0, 0.2, 15);
+      camera.lookAt(0, 0.1, 0);
+      if (bloomPass) bloomPass.strength = 0.62;
       for (let i = 0; i < N; i++){
-        pos[i*3]   = targets[i*3]   + explodeDir[i*3]   * k;
-        pos[i*3+1] = targets[i*3+1] + explodeDir[i*3+1] * k - 2*k*k;
-        pos[i*3+2] = targets[i*3+2] + explodeDir[i*3+2] * k;
+        setParticle(i, dust[i*3], dust[i*3+1], dust[i*3+2], 0.16, 0);
       }
       geo.attributes.position.needsUpdate = true;
-      mat.opacity = Math.max(0, 0.95 * (1 - k));
+      geo.attributes.color.needsUpdate = true;
     }
 
-    function animate(){
-      requestAnimationFrame(animate);
-      const t = clock.getElapsedTime();
+    function frame(){
+      requestAnimationFrame(frame);
+      const now = clock.getElapsedTime();
+      ambient += 0.006;
 
-      if (phase === 'converge'){
-        const k = Math.min((t - phaseStart) / 2.2, 1);
-        const ek = easeOutCubic(k);
-        updateConverge(ek);
-        camera.position.z = 9 - ek*3.5;
-        glowSprite.material.opacity = ek*0.55;
-        particles.rotation.y = ek*Math.PI*0.5;
-        if (k >= 1){ phase = 'hold'; phaseStart = t; }
-      } else if (phase === 'hold'){
-        particles.rotation.y += 0.012;
-        if (t - phaseStart > 1.1){ phase = 'explode'; phaseStart = t; }
-      } else if (phase === 'explode'){
-        const k = Math.min((t - phaseStart) / 1.3, 1);
-        const ek = easeInCubic(k);
-        updateExplode(ek);
-        camera.position.z = 5.5 + k*2;
-        glowSprite.material.opacity = Math.max(0, 0.55*(1-k));
-        textSprite.material.opacity = Math.min(1, k*1.5);
-        const s = 0.8 + 0.2*k;
-        textSprite.scale.set(7*s, 1.9*s, 1);
-        if (k >= 1 && phase !== 'done'){
-          phase = 'done';
-          document.querySelector('.head').classList.add('revealed');
-          setTimeout(() => { enterShowBtn.style.display = 'inline-block'; }, 300);
+      if (!running){
+        // Idle: slow drifting dust so the screen is never dead
+        for (let i = 0; i < N; i++){
+          const d = 0.05*Math.sin(ambient*0.8 + twPhase[i]);
+          const tw = 0.13 + 0.07*Math.sin(ambient*2.2 + twPhase[i]);
+          setParticle(i, dust[i*3], dust[i*3+1] + d, dust[i*3+2], tw, 0);
         }
+        points.rotation.y += 0.0004;
+        geo.attributes.position.needsUpdate = true;
+        geo.attributes.color.needsUpdate = true;
+        render();
+        return;
       }
 
-      renderer.render(scene, camera);
+      const t = now - startT;
+
+      if (t < T.voidEnd){
+        // BEAT 1 — The Void: dust drifts, camera pushes in
+        const k = t / T.voidEnd;
+        camera.position.z = 15 - easeInOutCubic(k)*3.2;
+        camera.position.y = 0.2 + Math.sin(ambient*0.5)*0.05;
+        for (let i = 0; i < N; i++){
+          const d = 0.05*Math.sin(ambient*0.8 + twPhase[i]);
+          const tw = 0.14 + 0.08*Math.sin(ambient*2.2 + twPhase[i]);
+          setParticle(i, dust[i*3], dust[i*3+1] + d, dust[i*3+2], tw, 0);
+        }
+        points.rotation.y += 0.0005;
+
+      } else if (t < T.igniteEnd){
+        // BEAT 2 — Ignition: shockwave sweeps out, lighting each mote as it passes
+        const k = (t - T.voidEnd) / (T.igniteEnd - T.voidEnd);
+        const ek = easeOutCubic(k);
+        const shockR = ek * 22;
+
+        ring.scale.setScalar(0.4 + ek*13);
+        ring.material.opacity = 0.85 * (1 - smoothstep(k*1.15));
+        ring.lookAt(camera.position);
+
+        coreGlow.material.opacity = 0.9 * Math.max(0, 1 - k*1.5);
+        coreGlow.scale.setScalar(2 + ek*5);
+
+        camera.position.z = 11.8 - ek*0.9;
+
+        for (let i = 0; i < N; i++){
+          const lit = smoothstep((shockR - distC[i]) / 2.4);
+          const tw = 0.9 + 0.1*Math.sin(ambient*3 + twPhase[i]);
+          const b = 0.14 + lit*(1.05*tw - 0.14);
+          const d = 0.05*Math.sin(ambient*0.8 + twPhase[i]);
+          setParticle(i, dust[i*3], dust[i*3+1] + d, dust[i*3+2], b, lit*0.7);
+        }
+
+      } else if (t < T.forgeEnd){
+        // BEAT 3 — The Forge: spiral inward in three waves (base -> stem -> cup)
+        const k = (t - T.igniteEnd) / (T.forgeEnd - T.igniteEnd);
+        ring.material.opacity = 0;
+
+        const orbit = easeInOutCubic(k);
+        camera.position.x = Math.sin(orbit*Math.PI*0.75) * 3.4;
+        camera.position.z = 10.9 - orbit*4.6;
+        camera.position.y = 0.2 + Math.sin(orbit*Math.PI)*0.55;
+        camera.lookAt(0, 0.15, 0);
+
+        coreGlow.material.opacity = 0.30*k;
+        coreGlow.scale.setScalar(3.5 + k*1.5);
+
+        for (let i = 0; i < N; i++){
+          const delay = WAVE_DELAY[waveOf[i]] + jitter[i];
+          const lk = clamp01((k - delay) / (1 - delay));
+          const e = easeInOutCubic(lk);
+
+          const x0 = dust[i*3],   y0 = dust[i*3+1],   z0 = dust[i*3+2];
+          const x1 = trophy[i*3], y1 = trophy[i*3+1], z1 = trophy[i*3+2];
+
+          let x = x0 + (x1-x0)*e;
+          let y = y0 + (y1-y0)*e;
+          let z = z0 + (z1-z0)*e;
+
+          // curved approach: unwind a spiral as the particle lands
+          const a = spiral[i] * (1-e) * 1.5;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          const rx = x*ca - z*sa, rz = x*sa + z*ca;
+          x = rx; z = rz;
+
+          const arrive = smoothstep(lk);
+          const tw = 0.85 + 0.15*Math.sin(ambient*3 + twPhase[i]);
+          const b = (0.5 + 0.55*arrive) * tw;
+          setParticle(i, x, y, z, b, 1 - arrive*0.75);
+        }
+        points.rotation.y = 0;
+
+      } else if (t < T.solidifyEnd){
+        // BEAT 4 — Solidify: heat wash, rim sweep, floor + shafts bloom, hero orbit
+        const k = (t - T.forgeEnd) / (T.solidifyEnd - T.forgeEnd);
+
+        points.rotation.y = k * 0.9;
+        camera.position.x = Math.sin(Math.PI*0.75 + k*0.7) * 3.0;
+        camera.position.z = 6.3 + Math.cos(k*0.7)*0.35;
+        camera.position.y = 0.75 - k*0.35;
+        camera.lookAt(0, 0.15, 0);
+
+        floor.material.opacity = 0.34 * smoothstep(k*1.4);
+        shafts.forEach(s => s.material.opacity = 0.030 * smoothstep(k*1.3));
+        coreGlow.material.opacity = 0.16 + 0.10*Math.sin(k*Math.PI);
+        coreGlow.scale.setScalar(4.2);
+
+        const sweepY = -1.1 + k*1.6*2.2;      // rim-light band travelling up the form
+        for (let i = 0; i < N; i++){
+          const y = trophy[i*3+1];
+          const band = Math.max(0, 1 - Math.abs(y - sweepY)*2.6);
+          const tw = 0.88 + 0.12*Math.sin(ambient*3.4 + twPhase[i]);
+          setParticle(i, trophy[i*3], y, trophy[i*3+2], (0.78 + band*0.85)*tw, band*0.8);
+        }
+
+      } else if (t < T.detonateEnd){
+        // BEAT 5 — Detonation: flash, particles blast past camera, pull back
+        const k = (t - T.solidifyEnd) / (T.detonateEnd - T.solidifyEnd);
+        const e = easeInCubic(k);
+
+        flash.material.opacity = Math.max(0, 1.1 * Math.pow(1 - k*2.6, 2)) * (k < 0.38 ? 1 : 0);
+        if (bloomPass) bloomPass.strength = 0.62 + 1.35*Math.max(0, 1 - k*3.5);
+
+        camera.position.x *= 0.90;
+        camera.position.z = 6.3 + e*4.4;
+        camera.position.y = 0.4 - e*0.2;
+        camera.lookAt(0, 0.15, 0);
+
+        floor.material.opacity = 0.34 * (1-k);
+        shafts.forEach(s => s.material.opacity = 0.030 * (1-k));
+        coreGlow.material.opacity = 0.5 * (1-k);
+
+        for (let i = 0; i < N; i++){
+          const x = trophy[i*3]   + (exploded[i*3]   - trophy[i*3])   * e;
+          const y = trophy[i*3+1] + (exploded[i*3+1] - trophy[i*3+1]) * e - 2.6*e*e;
+          const z = trophy[i*3+2] + (exploded[i*3+2] - trophy[i*3+2]) * e;
+          setParticle(i, x, y, z, (1.05 - 0.72*k), 0.45*(1-k));
+        }
+        points.rotation.y = 0;
+
+      } else if (t < T.nameEnd){
+        // BEAT 6 — The Name: the same motes reassemble into the wordmark
+        const k = (t - T.detonateEnd) / (T.nameEnd - T.detonateEnd);
+        const e = easeOutCubic(clamp01(k*1.85));
+
+        flash.material.opacity = 0;
+        if (bloomPass) bloomPass.strength = 0.62;
+
+        camera.position.x *= 0.9;
+        camera.position.y += (0.1 - camera.position.y)*0.08;
+        camera.position.z += (9.3 - camera.position.z)*0.06;
+        camera.lookAt(0, 0.1, 0);
+
+        const shimmer = -5.2 + k*13;          // gold sweep across the letterforms
+        for (let i = 0; i < N; i++){
+          const x = exploded[i*3]   + (text[i*3]   - exploded[i*3])   * e;
+          const y = exploded[i*3+1] + (text[i*3+1] - exploded[i*3+1]) * e;
+          const z = exploded[i*3+2] + (text[i*3+2] - exploded[i*3+2]) * e;
+          const band = Math.max(0, 1 - Math.abs(text[i*3] - shimmer)*1.1) * smoothstep(k*2.6);
+          const tw = 0.9 + 0.1*Math.sin(ambient*2.6 + twPhase[i]);
+          setParticle(i, x, y, z, (0.35 + 0.7*e + band*0.9)*tw, band*0.9);
+        }
+
+        if (!done && k > 0.62){
+          done = true;
+          document.querySelector('.head').classList.add('revealed');
+          replayForgeBtn.style.display = 'inline-block';
+          enterShowBtn.style.display = 'inline-block';
+        }
+
+      } else {
+        // Settled: hold the wordmark, gentle twinkle
+        for (let i = 0; i < N; i++){
+          const tw = 0.9 + 0.1*Math.sin(ambient*2.4 + twPhase[i]);
+          setParticle(i, text[i*3], text[i*3+1], text[i*3+2], 1.02*tw, 0.12);
+        }
+        camera.position.x *= 0.94;
+        camera.position.y += (0.1 - camera.position.y)*0.05;
+        camera.position.z += (9.3 - camera.position.z)*0.05;
+        camera.lookAt(0, 0.1, 0);
+      }
+
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.color.needsUpdate = true;
+      render();
     }
-    animate();
+
+    function render(){
+      if (composer) composer.render(); else renderer.render(scene, camera);
+    }
+
+    reset();
+    frame();
 
     return {
-      start(){
-        phase = 'converge';
-        phaseStart = clock.getElapsedTime();
+      play(){ reset(); running = true; startT = clock.getElapsedTime(); },
+      seek(sec){ reset(); running = true; startT = clock.getElapsedTime() - sec; },
+      skipToEnd(){
+        reset(); running = true; startT = clock.getElapsedTime() - (T.nameEnd + 0.2);
+        document.querySelector('.head').classList.add('revealed');
       }
     };
   }
 
-  if (reduceMotion){
+  const forgeWrap = document.getElementById('forgeWrap');
+  const stageEl = document.getElementById('stage');
+
+  if (reduceMotion || typeof THREE === 'undefined'){
     document.querySelector('.head').classList.add('revealed');
     beginForgeBtn.style.display = 'none';
     enterShowBtn.style.display = 'inline-block';
+    forgeWrap.classList.add('gone');
+    stageEl.classList.remove('opener');
   } else {
     const forge = initForge();
+    window.__forge = forge;
     beginForgeBtn.addEventListener('click', () => {
       beginForgeBtn.style.display = 'none';
-      forge.start();
+      forge.play();
     });
+    replayForgeBtn.addEventListener('click', () => forge.play());
   }
 
-  enterShowBtn.addEventListener('click', goToCategory);
+  enterShowBtn.addEventListener('click', () => {
+    forgeWrap.classList.add('gone');
+    stageEl.classList.remove('opener');
+    goToCategory();
+  });
 </script>
 
 </body>
