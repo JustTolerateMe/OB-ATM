@@ -993,6 +993,21 @@
     return new THREE.CanvasTexture(c);
   }
 
+  function makeLabelTexture(text){
+    const c = document.createElement('canvas');
+    c.width = 1024; c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    try { ctx.letterSpacing = '10px'; } catch(e){}
+    ctx.font = '600 46px -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif';
+    ctx.shadowColor = 'rgba(242,207,142,0.7)';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#f3e6d0';
+    ctx.fillText(text, c.width/2, c.height/2);
+    return new THREE.CanvasTexture(c);
+  }
+
   // Sample point positions from rendered text, so particles can become letterforms
   function sampleTextPoints(text, count, worldW, worldH){
     const c = document.createElement('canvas');
@@ -1093,7 +1108,7 @@
       composer.addPass(new THREE.RenderPass(scene, camera));
       bloomPass = new THREE.UnrealBloomPass(
         new THREE.Vector2(forgeCanvas.clientWidth || 800, forgeCanvas.clientHeight || 500),
-        0.62, 0.5, 0.28
+        0.72, 0.5, 0.26
       );
       composer.addPass(bloomPass);
     }
@@ -1170,15 +1185,20 @@
     const points = new THREE.Points(geo, mat);
     scene.add(points);
 
-    // ---- Shockwave ring ----
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.85, 1.0, 96),
-      new THREE.MeshBasicMaterial({
-        color: 0xfff4d6, transparent: true, opacity: 0,
-        blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
-      })
-    );
-    scene.add(ring);
+    // ---- Shockwave rings (staggered aftershocks) ----
+    const rings = [];
+    const RING_DELAY = [0, 0.16, 0.32];
+    for (let r = 0; r < 3; r++){
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(0.86, 1.0, 96),
+        new THREE.MeshBasicMaterial({
+          color: 0xfff4d6, transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
+        })
+      );
+      scene.add(m);
+      rings.push(m);
+    }
 
     // ---- Core glow, flash, floor, shafts ----
     const glowTex = makeRadialTexture('rgba(255,244,214,0.95)','rgba(212,175,106,0.35)','rgba(212,175,106,0)');
@@ -1221,8 +1241,69 @@
       shafts.push(cone);
     }
 
+    // ---- Motion trails: two lagged copies of the cloud, so fast motion streaks ----
+    const trailA = new Float32Array(N*3);
+    const trailB = new Float32Array(N*3);
+    trailA.set(positions); trailB.set(positions);
+
+    function makeTrail(buf, size, color, opacity){
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(buf, 3));
+      const m = new THREE.PointsMaterial({
+        size, color, transparent: true, opacity,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+        sizeAttenuation: true, map: mat.map
+      });
+      const pts = new THREE.Points(g, m);
+      scene.add(pts);
+      return pts;
+    }
+    const trail1 = makeTrail(trailA, 0.072, 0xf2cf8e, 0.34);
+    const trail2 = makeTrail(trailB, 0.060, 0xd4af6a, 0.16);
+
+    // ---- Ambient embers drifting upward, always alive ----
+    const EM = 260;
+    const emPos = new Float32Array(EM*3);
+    const emVel = new Float32Array(EM);
+    for (let i = 0; i < EM; i++){
+      emPos[i*3]   = (Math.random()-0.5)*22;
+      emPos[i*3+1] = -4 + Math.random()*10;
+      // keep embers well behind the camera's dolly so they never smear as near-field blobs
+      emPos[i*3+2] = -11 + Math.random()*9.5;
+      emVel[i] = 0.12 + Math.random()*0.42;
+    }
+    const emGeo = new THREE.BufferGeometry();
+    emGeo.setAttribute('position', new THREE.BufferAttribute(emPos, 3));
+    const embers = new THREE.Points(emGeo, new THREE.PointsMaterial({
+      size: 0.05, color: 0xd4af6a, transparent: true, opacity: 0.3,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, map: mat.map
+    }));
+    scene.add(embers);
+
+    // ---- Anamorphic lens streak ----
+    const streak = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    streak.scale.set(24, 0.55, 1);
+    scene.add(streak);
+
+    // ---- Wordmark support: hairline rule + subtitle ----
+    const rule = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    rule.position.set(0, -0.72, 0);
+    rule.scale.set(0.1, 0.07, 1);
+    scene.add(rule);
+
+    const subtitle = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeLabelTexture('OB ATM AWARDS NIGHT'), transparent: true, opacity: 0, depthWrite: false
+    }));
+    subtitle.position.set(0, -1.12, 0);
+    subtitle.scale.set(6.4, 0.8, 1);
+    scene.add(subtitle);
+
     // ---- Sequence state ----
-    let running = false, done = false, startT = 0, ambient = 0;
+    let running = false, done = false, startT = 0, ambient = 0, lastNow = 0;
     const clock = new THREE.Clock();
     const pos = geo.attributes.position.array;
     const col = geo.attributes.color.array;
@@ -1237,7 +1318,10 @@
 
     function reset(){
       running = false; done = false;
-      ring.material.opacity = 0;
+      rings.forEach(r => r.material.opacity = 0);
+      streak.material.opacity = 0;
+      rule.material.opacity = 0; rule.scale.set(0.1, 0.07, 1);
+      subtitle.material.opacity = 0;
       coreGlow.material.opacity = 0;
       flash.material.opacity = 0;
       floor.material.opacity = 0;
@@ -1245,7 +1329,7 @@
       points.rotation.y = 0;
       camera.position.set(0, 0.2, 15);
       camera.lookAt(0, 0.1, 0);
-      if (bloomPass) bloomPass.strength = 0.62;
+      if (bloomPass) bloomPass.strength = 0.72;
       for (let i = 0; i < N; i++){
         setParticle(i, dust[i*3], dust[i*3+1], dust[i*3+2], 0.16, 0);
       }
@@ -1256,7 +1340,16 @@
     function frame(){
       requestAnimationFrame(frame);
       const now = clock.getElapsedTime();
+      const dt = Math.min(now - lastNow, 0.05); lastNow = now;
       ambient += 0.006;
+
+      // ambient embers drift upward the whole time
+      for (let i = 0; i < EM; i++){
+        emPos[i*3+1] += emVel[i]*dt;
+        emPos[i*3]   += Math.sin(ambient*0.7 + i)*0.0016;
+        if (emPos[i*3+1] > 6){ emPos[i*3+1] = -4.5; emPos[i*3] = (Math.random()-0.5)*22; }
+      }
+      emGeo.attributes.position.needsUpdate = true;
 
       if (!running){
         // Idle: slow drifting dust so the screen is never dead
@@ -1273,6 +1366,7 @@
       }
 
       const t = now - startT;
+      let trailAmt = 0;   // trails only read when particles are actually moving
 
       if (t < T.voidEnd){
         // BEAT 1 — The Void: dust drifts, camera pushes in
@@ -1292,9 +1386,16 @@
         const ek = easeOutCubic(k);
         const shockR = ek * 22;
 
-        ring.scale.setScalar(0.4 + ek*13);
-        ring.material.opacity = 0.85 * (1 - smoothstep(k*1.15));
-        ring.lookAt(camera.position);
+        rings.forEach((r, ri) => {
+          const rk = clamp01((k - RING_DELAY[ri]) / (1 - RING_DELAY[ri]));
+          const re = easeOutCubic(rk);
+          r.scale.setScalar(0.4 + re*11);
+          r.material.opacity = (ri === 0 ? 0.9 : 0.4) * (1 - smoothstep(rk*1.1)) * (rk > 0 ? 1 : 0);
+          r.lookAt(camera.position);
+        });
+        streak.material.opacity = 0.5 * Math.max(0, 1 - k*2.2);
+        streak.scale.set(10 + ek*22, 0.4, 1);
+        trailAmt = 0.25;
 
         coreGlow.material.opacity = 0.9 * Math.max(0, 1 - k*1.5);
         coreGlow.scale.setScalar(2 + ek*5);
@@ -1312,7 +1413,8 @@
       } else if (t < T.forgeEnd){
         // BEAT 3 — The Forge: spiral inward in three waves (base -> stem -> cup)
         const k = (t - T.igniteEnd) / (T.forgeEnd - T.igniteEnd);
-        ring.material.opacity = 0;
+        rings.forEach(r => r.material.opacity = 0);
+        streak.material.opacity = 0;
 
         const orbit = easeInOutCubic(k);
         camera.position.x = Math.sin(orbit*Math.PI*0.75) * 3.4;
@@ -1322,6 +1424,7 @@
 
         coreGlow.material.opacity = 0.30*k;
         coreGlow.scale.setScalar(3.5 + k*1.5);
+        trailAmt = 1.0;
 
         for (let i = 0; i < N; i++){
           const delay = WAVE_DELAY[waveOf[i]] + jitter[i];
@@ -1343,7 +1446,7 @@
 
           const arrive = smoothstep(lk);
           const tw = 0.85 + 0.15*Math.sin(ambient*3 + twPhase[i]);
-          const b = (0.5 + 0.55*arrive) * tw;
+          const b = (0.62 + 0.62*arrive) * tw;
           setParticle(i, x, y, z, b, 1 - arrive*0.75);
         }
         points.rotation.y = 0;
@@ -1362,13 +1465,14 @@
         shafts.forEach(s => s.material.opacity = 0.030 * smoothstep(k*1.3));
         coreGlow.material.opacity = 0.16 + 0.10*Math.sin(k*Math.PI);
         coreGlow.scale.setScalar(4.2);
+        trailAmt = 0.12;
 
         const sweepY = -1.1 + k*1.6*2.2;      // rim-light band travelling up the form
         for (let i = 0; i < N; i++){
           const y = trophy[i*3+1];
           const band = Math.max(0, 1 - Math.abs(y - sweepY)*2.6);
           const tw = 0.88 + 0.12*Math.sin(ambient*3.4 + twPhase[i]);
-          setParticle(i, trophy[i*3], y, trophy[i*3+2], (0.78 + band*0.85)*tw, band*0.8);
+          setParticle(i, trophy[i*3], y, trophy[i*3+2], (0.88 + band*0.85)*tw, band*0.8);
         }
 
       } else if (t < T.detonateEnd){
@@ -1377,12 +1481,21 @@
         const e = easeInCubic(k);
 
         flash.material.opacity = Math.max(0, 1.1 * Math.pow(1 - k*2.6, 2)) * (k < 0.38 ? 1 : 0);
-        if (bloomPass) bloomPass.strength = 0.62 + 1.35*Math.max(0, 1 - k*3.5);
+        if (bloomPass) bloomPass.strength = 0.72 + 1.3*Math.max(0, 1 - k*3.5);
 
         camera.position.x *= 0.90;
         camera.position.z = 6.3 + e*4.4;
         camera.position.y = 0.4 - e*0.2;
         camera.lookAt(0, 0.15, 0);
+
+        // impact jolt, applied to rotation so it never accumulates on position
+        const jolt = Math.max(0, 1 - k*4.5) * 0.055;
+        camera.rotation.z += (Math.random()-0.5)*jolt;
+        camera.rotation.x += (Math.random()-0.5)*jolt*0.6;
+
+        streak.material.opacity = 0.85 * Math.max(0, 1 - k*3.2);
+        streak.scale.set(16 + k*26, 0.5 + k*0.5, 1);
+        trailAmt = 1.0;
 
         floor.material.opacity = 0.34 * (1-k);
         shafts.forEach(s => s.material.opacity = 0.030 * (1-k));
@@ -1402,7 +1515,7 @@
         const e = easeOutCubic(clamp01(k*1.85));
 
         flash.material.opacity = 0;
-        if (bloomPass) bloomPass.strength = 0.62;
+        if (bloomPass) bloomPass.strength = 0.72;
 
         camera.position.x *= 0.9;
         camera.position.y += (0.1 - camera.position.y)*0.08;
@@ -1419,6 +1532,15 @@
           setParticle(i, x, y, z, (0.35 + 0.7*e + band*0.9)*tw, band*0.9);
         }
 
+        // hairline rule draws outward, then the subtitle settles beneath it
+        const rk = clamp01((k - 0.42) / 0.4);
+        rule.material.opacity = 0.75 * rk;
+        rule.scale.set(0.1 + easeOutCubic(rk)*5.0, 0.07, 1);
+        subtitle.material.opacity = clamp01((k - 0.58) / 0.3) * 0.95;
+        streak.material.opacity = 0.45 * Math.max(0, 1 - Math.abs(k - 0.25)*5);
+        streak.scale.set(26, 0.45, 1);
+        trailAmt = 0.85 * Math.max(0, 1 - k*1.6);
+
         if (!done && k > 0.62){
           done = true;
           document.querySelector('.head').classList.add('revealed');
@@ -1432,11 +1554,18 @@
           const tw = 0.9 + 0.1*Math.sin(ambient*2.4 + twPhase[i]);
           setParticle(i, text[i*3], text[i*3+1], text[i*3+2], 1.02*tw, 0.12);
         }
+        rule.material.opacity = 0.75;
+        rule.scale.set(5.1, 0.07, 1);
+        subtitle.material.opacity = 0.95;
+        streak.material.opacity = 0;
         camera.position.x *= 0.94;
         camera.position.y += (0.1 - camera.position.y)*0.05;
         camera.position.z += (9.3 - camera.position.z)*0.05;
         camera.lookAt(0, 0.1, 0);
       }
+
+      trail1.material.opacity = 0.34 * trailAmt;
+      trail2.material.opacity = 0.16 * trailAmt;
 
       geo.attributes.position.needsUpdate = true;
       geo.attributes.color.needsUpdate = true;
@@ -1445,6 +1574,11 @@
 
     function render(){
       if (composer) composer.render(); else renderer.render(scene, camera);
+      // shift lagged copies AFTER drawing, so trails always trail
+      trailB.set(trailA);
+      trailA.set(pos);
+      trail1.geometry.attributes.position.needsUpdate = true;
+      trail2.geometry.attributes.position.needsUpdate = true;
     }
 
     reset();
