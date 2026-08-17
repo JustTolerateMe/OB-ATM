@@ -910,11 +910,78 @@
     }
   }
 
+  // ---- Synthesized drum roll (Web Audio API, no external file) ----
+  let audioCtx = null, masterGain = null;
+
+  function ensureAudio(){
+    if (audioCtx) { if (audioCtx.state === 'suspended') audioCtx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = new AC();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.55;
+    masterGain.connect(audioCtx.destination);
+  }
+
+  function makeNoiseBuffer(durSec){
+    const len = Math.max(1, Math.floor(audioCtx.sampleRate * durSec));
+    const buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    return buffer;
+  }
+
+  function scheduleSnareHit(when, durSec, peakGain){
+    const src = audioCtx.createBufferSource();
+    src.buffer = makeNoiseBuffer(durSec);
+    const band = audioCtx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 1600;
+    band.Q.value = 0.6;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(peakGain, when + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + durSec);
+    src.connect(band); band.connect(g); g.connect(masterGain);
+    src.start(when); src.stop(when + durSec + 0.02);
+  }
+
+  function scheduleCrash(when){
+    const dur = 0.7;
+    const src = audioCtx.createBufferSource();
+    src.buffer = makeNoiseBuffer(dur);
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2200;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.linearRampToValueAtTime(0.6, when + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    src.connect(hp); hp.connect(g); g.connect(masterGain);
+    src.start(when); src.stop(when + dur + 0.05);
+  }
+
+  function playDrumroll(totalMs){
+    ensureAudio();
+    if (!audioCtx) return;
+    const totalSec = totalMs / 1000;
+    const start = audioCtx.currentTime + 0.02;
+    let t = 0, interval = 0.15;
+    while (t < totalSec - 0.04){
+      const progress = t / totalSec;
+      scheduleSnareHit(start + t, 0.05, 0.16 + 0.28 * progress);
+      interval = Math.max(0.045, interval * 0.90);
+      t += interval;
+    }
+    scheduleCrash(start + totalSec);
+  }
+
   revealNomineesBtn.addEventListener('click', renderNominees);
 
   revealBtn.addEventListener('click', () => {
     showPanel(suspensePanel);
     envelope.classList.add('shake');
+    playDrumroll(2400);
 
     setTimeout(() => {
       envelope.classList.remove('shake');
