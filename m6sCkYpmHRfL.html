@@ -1415,8 +1415,9 @@
           let y = y0 + (y1-y0)*e;
           let z = z0 + (z1-z0)*e;
 
-          // curved approach: unwind a spiral as the particle lands
-          const a = spiral[i] * (1-e) * 1.5;
+          // curved approach: spiral winds up then unwinds, zero at both ends so
+          // there is never a jump the instant a particle starts or finishes moving
+          const a = spiral[i] * (4 * lk * (1 - lk)) * 1.5;
           const ca = Math.cos(a), sa = Math.sin(a);
           const rx = x*ca - z*sa, rz = x*sa + z*ca;
           x = rx; z = rz;
