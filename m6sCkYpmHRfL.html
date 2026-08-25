@@ -246,27 +246,6 @@
     color: var(--cream);
     margin: 0 0 4px;
   }
-  /* ---- Act break panel ---- */
-  #actPanel.active{
-    animation: fade-up 0.6s ease both;
-  }
-  .act-label{
-    font-size: 16px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin: 0 0 18px;
-  }
-  .act-name{
-    font-family: Georgia, serif;
-    font-weight: 700;
-    font-size: 64px;
-    margin: 0 0 8px;
-    color: var(--gold-bright);
-    text-shadow: 0 0 40px rgba(242,207,142,0.4);
-    text-wrap: balance;
-  }
-
   /* ---- Suspense panel ---- */
   .envelope{
     position: relative;
@@ -525,15 +504,6 @@
       </div>
     </div>
 
-    <!-- Act break bumper -->
-    <div class="panel" id="actPanel">
-      <p class="act-label" id="actLabel">Act I</p>
-      <h2 class="act-name" id="actName">Red Carpet Arrival</h2>
-      <div class="controls">
-        <button class="btn" id="actContinueBtn">Continue</button>
-      </div>
-    </div>
-
     <!-- Beat 3a: suspense -->
     <div class="panel" id="suspensePanel">
       <div class="envelope" id="envelope">
@@ -598,9 +568,7 @@
   function two(key1, key2, blurb){ return { members: [people[key1], people[key2]], blurb }; }
 
   const categories = [
-    // ---- ACT I: Red Carpet Arrival ----
     {
-      act: 1,
       title: "The Golden Boot Award",
       nominees: [
         one("anup", "Captain energy, every single match"),
@@ -610,7 +578,6 @@
       winner: { members: [people.anup], why: "Doesn't need to be on the pitch to know exactly what went wrong with that offside call. Peak fan energy, zero playing time." }
     },
     {
-      act: 1,
       title: "Best Costume Design Award",
       nominees: [
         one("shweta", "Dressed for the awards before the invite went out"),
@@ -620,7 +587,6 @@
       winner: { members: [people.ravi], why: "Dresses like the meeting was actually important. We appreciate the effort." }
     },
     {
-      act: 1,
       title: "The Michelin Star Award",
       nominees: [
         one("omkar", "The potluck MVP, every time"),
@@ -630,7 +596,6 @@
       winner: { members: [people.omkar, people.sunil], why: "Two people, one kitchen rivalry, zero survivors at the potluck table." }
     },
     {
-      act: 1,
       title: "Best Cinematography Award",
       nominees: [
         one("maitrey", "Finds the shot nobody else sees"),
@@ -639,10 +604,7 @@
       ],
       winner: { members: [people.ranjith], why: "Turns out the real talent was never the group chat candids — it's the birds. Camera always ready, patience always unmatched." }
     },
-
-    // ---- ACT II: The Main Event ----
     {
-      act: 2,
       title: "The Powerhouse Award",
       nominees: [
         one("rishikesh", "Knows the gym's opening hours by heart"),
@@ -652,7 +614,6 @@
       winner: { members: [people.jayant], why: "Has opinions about your protein intake and isn't wrong. Respect the grind." }
     },
     {
-      act: 2,
       title: "Best Production Design Award",
       nominees: [
         one("shweta", "Doodles that outshine the deck"),
@@ -662,7 +623,6 @@
       winner: { members: [people.shweta], why: "Doodles better in the margins of a meeting notebook than most people do on purpose." }
     },
     {
-      act: 2,
       title: "Best Ensemble Cast Award",
       nominees: [
         one("maitrey", "Good at everything, humble about it"),
@@ -672,7 +632,6 @@
       winner: { members: [people.murali], why: "Good at basically everything, which is deeply annoying for the rest of us." }
     },
     {
-      act: 2,
       title: "The Rock Award",
       nominees: [
         one("sashi", "Says it'll get done. It gets done."),
@@ -682,7 +641,6 @@
       winner: { members: [people.sashi], why: "The person you ping at 6pm knowing it'll actually get done." }
     },
     {
-      act: 2,
       title: "The Steady Hand Award",
       nominees: [
         one("rishikesh", "Nothing ever seems to faze him"),
@@ -692,7 +650,6 @@
       winner: { members: [people.maitrey], why: "The one person in the room who never seems to panic, no matter what the deadline says." }
     },
     {
-      act: 2,
       title: "Best Original Screenplay Award",
       nominees: [
         one("spruha", "Every anecdote has a plot twist"),
@@ -701,10 +658,7 @@
       ],
       winner: { members: [people.anil], why: "Can turn a five-minute update into a five-act saga, and somehow you want more." }
     },
-
-    // ---- ACT III: The Grand Finale ----
     {
-      act: 3,
       title: "The Trailblazer Award",
       nominees: [
         one("guna", "First to try, first to break it"),
@@ -714,7 +668,6 @@
       winner: { members: [people.guna], why: "First to open any new tool the second it drops, and first to explain it to the rest of us before we've even heard of it." }
     },
     {
-      act: 3,
       title: "The Zen Master Award",
       nominees: [
         one("manjunath", "Unbothered by literally anything"),
@@ -724,7 +677,6 @@
       winner: { members: [people.manjunath], why: "Has a direct line upstairs and isn't shy about using it. The most spiritually grounded person in the building, hands down." }
     },
     {
-      act: 3,
       title: "Best On-Screen Chemistry Award",
       nominees: [
         two("spruha", "sweety", "Bicker like siblings, brainstorm like legends"),
@@ -734,7 +686,6 @@
       winner: { members: [people.spruha, people.sweety], why: "Finish each other's sentences and somehow every idea gets better for it. Best friends first, brilliant collaborators always." }
     },
     {
-      act: 3,
       title: "Best Supporting Role Award",
       nominees: [
         one("ritu", "Always has time, always tuned in"),
@@ -744,7 +695,6 @@
       winner: { members: [people.ritu], why: "Always has time, always actually listening. The office's open door policy, in human form." }
     },
     {
-      act: 3,
       title: "The Visionary Director Award",
       nominees: [
         one("haresh", "Three steps ahead, always"),
@@ -754,7 +704,6 @@
       winner: { members: [people.haresh], why: "Sees three moves ahead on everything — work, life, and probably this meeting." }
     },
     {
-      act: 3,
       title: "Best Leading Performance Award",
       nominees: [
         one("anshuman", "One-man comedy hour, every meeting"),
@@ -764,7 +713,6 @@
       winner: { members: [people.anshuman], why: "Can turn a dead-quiet room into a full bit in under thirty seconds." }
     },
     {
-      act: 3,
       title: "Best Comeback Award",
       nominees: [
         one("rishikesh", "Bounces back before you notice he fell"),
@@ -774,12 +722,6 @@
       winner: { members: [people.rishikesh], why: "Put in the work when nobody was watching, and it shows in everything he does now. The definition of a glow-up." }
     }
   ];
-
-  const actInfo = {
-    1: { label: "Act I", name: "Red Carpet Arrival" },
-    2: { label: "Act II", name: "The Main Event" },
-    3: { label: "Act III", name: "The Grand Finale" }
-  };
 
   let current = 0;
 
@@ -795,14 +737,10 @@
   const openerPanel = document.getElementById('openerPanel');
   const introPanel = document.getElementById('introPanel');
   const nomineesPanel = document.getElementById('nomineesPanel');
-  const actPanel = document.getElementById('actPanel');
-  const actLabel = document.getElementById('actLabel');
-  const actName = document.getElementById('actName');
-  const actContinueBtn = document.getElementById('actContinueBtn');
   const suspensePanel = document.getElementById('suspensePanel');
   const winnerPanel = document.getElementById('winnerPanel');
   const outroPanel = document.getElementById('outroPanel');
-  const allPanels = [openerPanel, introPanel, nomineesPanel, actPanel, suspensePanel, winnerPanel, outroPanel];
+  const allPanels = [openerPanel, introPanel, nomineesPanel, suspensePanel, winnerPanel, outroPanel];
 
   const envelope = document.getElementById('envelope');
   const revealNomineesBtn = document.getElementById('revealNomineesBtn');
@@ -841,23 +779,11 @@
   }
 
   function goToCategory(){
-    const cat = categories[current];
     envelope.classList.remove('shake', 'open');
     confettiEl.innerHTML = '';
     buildProgress();
-
-    const prevAct = current > 0 ? categories[current - 1].act : null;
-    if (cat.act !== prevAct){
-      const info = actInfo[cat.act];
-      actLabel.textContent = info.label;
-      actName.textContent = info.name;
-      showPanel(actPanel);
-    } else {
-      showIntroContent();
-    }
+    showIntroContent();
   }
-
-  actContinueBtn.addEventListener('click', showIntroContent);
 
   function renderNominees(){
     const cat = categories[current];
